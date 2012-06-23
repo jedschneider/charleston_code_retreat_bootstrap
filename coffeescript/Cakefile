@@ -1,0 +1,34 @@
+{exec} = require 'child_process'
+
+run = (command)->
+  exec command, (err,stdout, stderr)->
+    throw err if err
+    console.log stdout + stderr
+
+compile =(src, dest)->
+  run "coffee --bare --compile --output #{dest}/ #{src}/"
+
+task 'build', 'Build project src and spec files', ->
+  invoke 'compile:src'
+  invoke 'compile:spec'
+
+task 'compile:src', 'Compiles Source CoffeeScripts', ->
+  compile("src", "lib")
+
+task 'compile:spec', 'Compiles spec CoffeeScripts', ->
+  compile("spec/coffeescripts", "spec/javascripts")
+
+task 'clean', 'removes compiled javascripts', ->
+  run 'rm lib/*.js && rm spec/javascripts/*.js'
+  
+task 'watch', 'Watch prod source files and build changes', ->
+    fs = require 'fs'
+    invoke 'build'
+    console.log "Watching for changes in src"
+    appFiles = ["src/life.coffee", "spec/coffeescripts/cell_spec.coffee"]
+    for file in appFiles then do (file) ->
+        fs.watchFile file, (curr, prev) ->
+            if +curr.mtime isnt +prev.mtime
+                console.log "Saw change in #{file}"
+                console.log 'Whoa. Saw a change. Building. Hold plz.'
+                invoke 'build'
